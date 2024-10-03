@@ -52,7 +52,7 @@ fn xor_hex_with_given_char(data: &str, key: char) -> Option<String> {
 fn count_characters(data: &str) -> HashMap<char, i32> {
     let mut characters_count = HashMap::new();
     for character in data.chars() {
-        *characters_count.entry(character).or_insert(0) += 1;
+        *characters_count.entry(character).or_insert(1) += 1;
     }
 
     characters_count
@@ -99,10 +99,11 @@ fn similarity_to_english(frequencies: HashMap<char, f64>) -> f64 {
     ]);
     let mut similarity = 0f64;
     for (character, actual_frequency) in frequencies {
-        let expected_frequency = expected_frequencies
-            .get(&character)
-            .unwrap_or(&actual_frequency);
-        similarity += chi_squared_test(expected_frequency, &actual_frequency);
+        if let Some(expected_frequency) = expected_frequencies.get(&character) {
+            similarity += chi_squared_test(expected_frequency, &actual_frequency);
+        } else {
+            similarity += 10.0;
+        }
     }
 
     similarity

@@ -1,5 +1,3 @@
-use core::str;
-
 use base64::prelude::*;
 
 pub fn hex_to_base64(data: &str) -> String {
