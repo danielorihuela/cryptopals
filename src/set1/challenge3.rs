@@ -1,5 +1,9 @@
 use std::collections::HashMap;
 
+use base64::prelude::*;
+
+use super::challenge2::xor_bytes;
+
 pub struct DecryptMetadata {
     pub key: char,
     pub english_similarity: f64,
@@ -16,11 +20,22 @@ impl Default for DecryptMetadata {
     }
 }
 
-pub fn decrypt_hex_single_char_key(data: &str) -> DecryptMetadata {
-    let mut decrypt_metadata = DecryptMetadata::default();
+pub fn break_single_xor_hex(data: &str) -> DecryptMetadata {
+    let data = hex::decode(data).expect("Valid hex data");
+    break_single_xor_bytes(&data)
+}
 
+pub fn break_single_xor_base64(data: &str) -> DecryptMetadata {
+    let data = BASE64_STANDARD.decode(data).expect("Valid base64 data");
+    break_single_xor_bytes(&data)
+}
+
+pub fn break_single_xor_bytes(data: &[u8]) -> DecryptMetadata {
+    let mut decrypt_metadata = DecryptMetadata::default();
     for i in 0..256u16 {
-        let Some(decrypted_data) = xor_hex_with_given_char(data, i as u8 as char) else {
+        let repeating_key = vec![i as u8; data.len()];
+        let xor_data = xor_bytes(data, &repeating_key);
+        let Some(decrypted_data) = String::from_utf8(xor_data).ok() else {
             continue;
         };
 
@@ -40,13 +55,6 @@ pub fn decrypt_hex_single_char_key(data: &str) -> DecryptMetadata {
     }
 
     decrypt_metadata
-}
-
-fn xor_hex_with_given_char(data: &str, key: char) -> Option<String> {
-    let bytes = hex::decode(data).expect("Inputed data should be valid");
-    let xor_bytes = bytes.iter().map(|b| b ^ (key as u8)).collect::<Vec<u8>>();
-
-    String::from_utf8(xor_bytes).ok()
 }
 
 fn count_characters(data: &str) -> HashMap<char, i32> {
@@ -118,9 +126,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn decrypt_hex_works() {
+    fn bruteforce_key_works() {
         let encrypted_data = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
-        let metadata = decrypt_hex_single_char_key(&encrypted_data);
+        let metadata = break_single_xor_hex(&encrypted_data);
 
         assert_eq!('X', metadata.key);
         assert_eq!(

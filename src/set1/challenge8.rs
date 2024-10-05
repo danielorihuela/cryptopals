@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-pub fn detect_aes_ecb(data: &[Vec<u8>]) -> Option<String> {
+pub fn detect_aes_128_ecb(data: &[Vec<u8>]) -> Option<String> {
     let mut detected_aes_line = String::new();
     let mut current_max_count = 0;
     for line in data {
@@ -28,21 +28,18 @@ pub fn detect_aes_ecb(data: &[Vec<u8>]) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs::File, io::Read};
+    use crate::set1::read_set1_resource;
 
     use super::*;
 
     #[test]
     fn decrypt_aes_128_ecb_works() {
-        let mut file = File::open("set1-challenge8.txt").expect("File should exist");
-        let mut buffer = String::new();
-        file.read_to_string(&mut buffer)
-            .expect("File should contain valid data");
-        let data = buffer
+        let file_data = read_set1_resource("challenge8.txt");
+        let data = file_data
             .lines()
             .map(|l| hex::decode(l).unwrap())
             .collect::<Vec<Vec<u8>>>();
 
-        assert_eq!("d880619740a8a19b7840a8a31c810a3d08649af70dc06f4fd5d2d69c744cd283e2dd052f6b641dbf9d11b0348542bb5708649af70dc06f4fd5d2d69c744cd2839475c9dfdbc1d46597949d9c7e82bf5a08649af70dc06f4fd5d2d69c744cd28397a93eab8d6aecd566489154789a6b0308649af70dc06f4fd5d2d69c744cd283d403180c98c8f6db1f2a3f9c4040deb0ab51b29933f2c123c58386b06fba186a", detect_aes_ecb(&data).unwrap());
+        assert_eq!("d880619740a8a19b7840a8a31c810a3d08649af70dc06f4fd5d2d69c744cd283e2dd052f6b641dbf9d11b0348542bb5708649af70dc06f4fd5d2d69c744cd2839475c9dfdbc1d46597949d9c7e82bf5a08649af70dc06f4fd5d2d69c744cd28397a93eab8d6aecd566489154789a6b0308649af70dc06f4fd5d2d69c744cd283d403180c98c8f6db1f2a3f9c4040deb0ab51b29933f2c123c58386b06fba186a", detect_aes_128_ecb(&data).unwrap());
     }
 }

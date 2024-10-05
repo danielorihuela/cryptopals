@@ -1,13 +1,21 @@
-pub fn xor_hex(a: &str, b: &str) -> String {
-    let a_bytes = hex::decode(a).expect("Inputed data should be valid");
-    let b_bytes = hex::decode(b).expect("Inputed data should be valid");
-    let xor_bytes = a_bytes
-        .iter()
-        .zip(b_bytes)
-        .map(|(a, b)| a ^ b)
-        .collect::<Vec<u8>>();
+use base64::prelude::*;
 
-    hex::encode(xor_bytes)
+pub fn xor_hex(a: &str, b: &str) -> String {
+    let a_bytes = hex::decode(a).expect("Valid hex data");
+    let b_bytes = hex::decode(b).expect("Valid hex data");
+
+    hex::encode(xor_bytes(&a_bytes, &b_bytes))
+}
+
+pub fn xor_base64(a: &str, b: &str) -> String {
+    let a_bytes = BASE64_STANDARD.decode(a).expect("Valid base64 data");
+    let b_bytes = BASE64_STANDARD.decode(b).expect("Valid base64 data");
+
+    BASE64_STANDARD.encode(xor_bytes(&a_bytes, &b_bytes))
+}
+
+pub fn xor_bytes(a: &[u8], b: &[u8]) -> Vec<u8> {
+    a.iter().zip(b).map(|(a, b)| a ^ b).collect::<Vec<u8>>()
 }
 
 #[cfg(test)]

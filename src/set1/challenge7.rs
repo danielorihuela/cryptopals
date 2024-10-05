@@ -9,7 +9,7 @@ pub fn decrypt_aes_128_ecb(data: &[u8], key: &str) -> Option<String> {
     let plain = data
         .chunks(16)
         .map(|c| {
-            let mut block = GenericArray::<u8, U16>::from_slice(c).clone();
+            let mut block = *GenericArray::<u8, U16>::from_slice(c);
             cipher.decrypt_block(&mut block);
 
             block
@@ -22,19 +22,16 @@ pub fn decrypt_aes_128_ecb(data: &[u8], key: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs::File, io::Read};
-
     use base64::prelude::*;
+
+    use crate::set1::read_set1_resource;
 
     use super::*;
 
     #[test]
     fn decrypt_aes_128_ecb_works() {
-        let mut file = File::open("set1-challenge7.txt").expect("File should exist");
-        let mut buffer = String::new();
-        file.read_to_string(&mut buffer)
-            .expect("File should contain valid data");
-        let data = buffer.lines().collect::<String>();
+        let file_data = read_set1_resource("challenge7.txt");
+        let data = file_data.lines().collect::<String>();
         let data = BASE64_STANDARD.decode(data).unwrap();
 
         let plain = decrypt_aes_128_ecb(&data, "YELLOW SUBMARINE").unwrap();
