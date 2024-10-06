@@ -1,4 +1,4 @@
-pub fn pkcs7_padding_bytes(data: &[u8], pad: u8, num_bytes: u8) -> Vec<u8> {
+pub fn pkcs7_padding_bytes(data: &[u8], pad: u8, num_bytes: usize) -> Vec<u8> {
     debug_assert!(data.len() < num_bytes as usize);
 
     [data, &vec![pad; num_bytes as usize - data.len()]].concat()

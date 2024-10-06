@@ -4,15 +4,7 @@ pub fn detect_aes_128_ecb(data: &[Vec<u8>]) -> Option<String> {
     let mut detected_aes_line = String::new();
     let mut current_max_count = 0;
     for line in data {
-        let mut count_chunks = HashMap::<Vec<u8>, u128>::new();
-        for chunk in line.chunks(16) {
-            *count_chunks.entry(chunk.to_vec()).or_insert(1) += 1;
-        }
-
-        let max_count = count_chunks
-            .into_values()
-            .max()
-            .expect("Have at least one element");
+        let max_count = max_repeated_block(&line);
         if max_count > current_max_count {
             current_max_count = max_count;
             detected_aes_line = hex::encode(line);
@@ -24,6 +16,18 @@ pub fn detect_aes_128_ecb(data: &[Vec<u8>]) -> Option<String> {
     } else {
         Some(detected_aes_line)
     }
+}
+
+pub fn max_repeated_block(data: &[u8]) -> u128 {
+    let mut count_chunks = HashMap::<Vec<u8>, u128>::new();
+    for chunk in data.chunks(16) {
+        *count_chunks.entry(chunk.to_vec()).or_insert(1) += 1;
+    }
+
+    count_chunks
+        .into_values()
+        .max()
+        .expect("Have at least one element")
 }
 
 #[cfg(test)]
