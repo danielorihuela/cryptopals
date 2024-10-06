@@ -3,8 +3,8 @@ use aes::{
     Aes128,
 };
 
-pub fn decrypt_aes_128_ecb(data: &[u8], key: &str) -> Option<String> {
-    let key = GenericArray::from_slice(key.as_bytes());
+pub fn decrypt_aes_128_ecb(data: &[u8], key: &[u8]) -> Option<String> {
+    let key = GenericArray::from_slice(key);
     let cipher = Aes128::new(key);
     let plain = data
         .chunks(16)
@@ -34,7 +34,7 @@ mod tests {
         let data = file_data.lines().collect::<String>();
         let data = BASE64_STANDARD.decode(data).unwrap();
 
-        let plain = decrypt_aes_128_ecb(&data, "YELLOW SUBMARINE").unwrap();
+        let plain = decrypt_aes_128_ecb(&data, "YELLOW SUBMARINE".as_bytes()).unwrap();
         assert!(plain.starts_with(
             "I'm back and I'm ringin' the bell \nA rockin' on the mike while the fly girls yell"
         ));
