@@ -18,7 +18,7 @@ pub fn encryption_oracle(data: &[u8], mode: &mut BlockMode) -> Vec<u8> {
 
     let a = rng.gen_range(5..=10);
     let b = rng.gen_range(5..=10);
-    let padding_length = (16 - ((data.len() + a + b) % 16));
+    let padding_length = 16 - ((data.len() + a + b) % 16);
     let data = [&random_bytes(a), data, &random_bytes(b)].concat();
     let padded_data = pkcs7_padding_bytes(&data, 0, data.len() + padding_length);
 

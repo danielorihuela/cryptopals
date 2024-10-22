@@ -4,7 +4,7 @@ pub fn detect_aes_128_ecb(data: &[Vec<u8>]) -> Option<String> {
     let mut detected_aes_line = String::new();
     let mut current_max_count = 0;
     for line in data {
-        let max_count = max_repeated_block(&line);
+        let max_count = max_repeated_block(line);
         if max_count > current_max_count {
             current_max_count = max_count;
             detected_aes_line = hex::encode(line);
