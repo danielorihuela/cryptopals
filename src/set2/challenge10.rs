@@ -5,10 +5,13 @@ use aes::{
 
 use crate::set1::challenge2::xor_bytes;
 
+use super::challenge9::pkcs7_padding;
+
 pub fn encrypt_aes_128_ecb(data: &[u8], key: &[u8]) -> Vec<u8> {
     let key = GenericArray::from_slice(key);
+
     let plain = Aes128::new(key);
-    let cipher = data
+    let cipher = pkcs7_padding(data, 16)
         .chunks(16)
         .map(|c| {
             let mut block = *GenericArray::<u8, U16>::from_slice(c);
@@ -28,7 +31,7 @@ pub fn encrypt_aes_128_cbc(data: &[u8], key: &[u8], iv: Option<Vec<u8>>) -> Vec<
 
     let mut cipher = vec![];
     let mut prev_chunk = iv.unwrap_or(vec![0; 16]);
-    for curr_chunk in data.chunks(16) {
+    for curr_chunk in pkcs7_padding(data, 16).chunks(16) {
         let xor_chunk = xor_bytes(&prev_chunk, curr_chunk);
 
         let mut cipher_chunk = *GenericArray::<u8, U16>::from_slice(&xor_chunk);
@@ -57,7 +60,13 @@ pub fn decrypt_aes_128_cbc(data: &[u8], key: &[u8], iv: Option<Vec<u8>>) -> Opti
         plain.push(xor_bytes(&plain_chunk, prev_chunk));
     }
 
-    let plain = plain.iter().rev().flatten().cloned().collect::<Vec<u8>>();
+    let plain = plain
+        .iter()
+        .rev()
+        .flatten()
+        .filter(|&&x| x != 0)
+        .cloned()
+        .collect::<Vec<u8>>();
 
     String::from_utf8(plain).ok()
 }
@@ -79,11 +88,27 @@ mod tests {
             message,
             decrypt_aes_128_ecb(&cipher, password.as_bytes()).unwrap()
         );
+
+        let message = "Random message";
+        let password = "YELLOW SUBMARINE";
+        let cipher = encrypt_aes_128_ecb(message.as_bytes(), password.as_bytes());
+        assert_eq!(
+            message,
+            decrypt_aes_128_ecb(&cipher, password.as_bytes()).unwrap()
+        );
     }
 
     #[test]
     fn encrypt_decrypt_aes_128_cbc_works() {
         let message = "Random message I need to encrypt";
+        let password = "YELLOW SUBMARINE";
+        let cipher = encrypt_aes_128_cbc(message.as_bytes(), password.as_bytes(), None);
+        assert_eq!(
+            message,
+            decrypt_aes_128_cbc(&cipher, password.as_bytes(), None).unwrap()
+        );
+
+        let message = "Random message";
         let password = "YELLOW SUBMARINE";
         let cipher = encrypt_aes_128_cbc(message.as_bytes(), password.as_bytes(), None);
         assert_eq!(

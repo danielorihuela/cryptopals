@@ -2,10 +2,7 @@ use rand::Rng;
 
 use crate::set1::challenge8::max_repeated_block;
 
-use super::{
-    challenge10::{encrypt_aes_128_cbc, encrypt_aes_128_ecb},
-    challenge9::pkcs7_padding_bytes,
-};
+use super::challenge10::{encrypt_aes_128_cbc, encrypt_aes_128_ecb};
 
 pub fn random_bytes(num_bytes: usize) -> Vec<u8> {
     (0..num_bytes)
@@ -18,21 +15,19 @@ pub fn encryption_oracle(data: &[u8], mode: &mut BlockMode) -> Vec<u8> {
 
     let a = rng.gen_range(5..=10);
     let b = rng.gen_range(5..=10);
-    let padding_length = 16 - ((data.len() + a + b) % 16);
     let data = [&random_bytes(a), data, &random_bytes(b)].concat();
-    let padded_data = pkcs7_padding_bytes(&data, 0, data.len() + padding_length);
 
     let key = random_bytes(16);
     let ecb = rand::random::<bool>();
     if ecb {
         *mode = BlockMode::ECB;
 
-        encrypt_aes_128_ecb(&padded_data, &key)
+        encrypt_aes_128_ecb(&data, &key)
     } else {
         *mode = BlockMode::CBC;
 
         let iv = random_bytes(16);
-        encrypt_aes_128_cbc(&padded_data, &key, Some(iv))
+        encrypt_aes_128_cbc(&data, &key, Some(iv))
     }
 }
 

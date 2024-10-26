@@ -2,16 +2,15 @@ use std::collections::HashMap;
 
 use base64::prelude::*;
 
-use super::{challenge10::encrypt_aes_128_ecb, challenge9::pkcs7_padding_bytes};
+use super::challenge10::encrypt_aes_128_ecb;
 
 const UNKNOWN_STRING: &str = "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK";
 
 pub fn encryption_oracle(data: &[u8], key: &[u8]) -> Vec<u8> {
     let unknown_string = BASE64_STANDARD.decode(UNKNOWN_STRING).expect("Valid data");
     let data = [data, &unknown_string].concat();
-    let padded_data = pkcs7_padding_bytes(&data, 0, data.len() + 16 - data.len() % 16);
 
-    encrypt_aes_128_ecb(&padded_data, key)
+    encrypt_aes_128_ecb(&data, key)
 }
 
 pub fn attack_ecb_one_byte_at_a_time<F>(encryption_fn: F) -> String
