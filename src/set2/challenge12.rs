@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use base64::prelude::*;
 
+use crate::set1::challenge8::max_repeated_block;
+
 use super::challenge10::encrypt_aes_128_ecb;
 
 const UNKNOWN_STRING: &str = "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK";
@@ -47,7 +49,7 @@ where
     String::from_utf8(decrypted_blocks.into_iter().flatten().collect()).unwrap()
 }
 
-fn discover_block_size<F>(encryption_fn: F) -> usize
+pub fn discover_block_size<F>(encryption_fn: F) -> usize
 where
     F: Fn(&[u8]) -> Vec<u8>,
 {
@@ -56,22 +58,28 @@ where
         let encrypted_a = encryption_fn(&prefix);
         let encrypted_b = encryption_fn(&prefix[..i - 1]);
         let first_block_stays_the_same = encrypted_a[..i - 1] == encrypted_b[..i - 1];
-        if first_block_stays_the_same {
-            return i - 1;
+        if !first_block_stays_the_same {
+            continue;
+        }
+
+        for j in 2..65 {
+            if encrypted_a[j] != encrypted_b[j] {
+                return j;
+            }
         }
     }
 
     0
 }
 
-fn is_ecb<F>(encryption_fn: F, block_size: usize) -> bool
+pub fn is_ecb<F>(encryption_fn: F, block_size: usize) -> bool
 where
     F: Fn(&[u8]) -> Vec<u8>,
 {
-    let data = vec![b'a'; 2 * block_size];
-    let encrypted_data = encryption_fn(&data);
+    let plain = vec![0; block_size * 100];
+    let cipher = encryption_fn(&plain);
 
-    encrypted_data[0..block_size] == encrypted_data[block_size..2 * block_size]
+    max_repeated_block(&cipher) >= 100
 }
 
 fn brute_force_encrypted_block<F>(
