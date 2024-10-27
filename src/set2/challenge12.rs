@@ -35,11 +35,11 @@ where
             };
             let crafted_prefix = [&prefix, &decrypted_blocks[i][..]].concat();
             let encrypted_block_to_character =
-                brute_force_encrypted_block(&encryption_fn, &crafted_prefix, block_size);
+                brute_force_encrypted_block(&encryption_fn, &crafted_prefix, 0, block_size);
 
-            let encryped_data = encryption_fn(&prefix);
+            let encrypted_data = encryption_fn(&prefix);
             let character = encrypted_block_to_character
-                .get(&encryped_data[i * block_size..(i + 1) * block_size])
+                .get(&encrypted_data[i * block_size..(i + 1) * block_size])
                 .expect("Exists");
 
             decrypted_blocks[i].push(*character);
@@ -53,19 +53,31 @@ pub fn discover_block_size<F>(encryption_fn: F) -> usize
 where
     F: Fn(&[u8]) -> Vec<u8>,
 {
-    for i in 2..65 {
-        let prefix = vec![b'a'; i];
-        let encrypted_a = encryption_fn(&prefix);
-        let encrypted_b = encryption_fn(&prefix[..i - 1]);
-        let first_block_stays_the_same = encrypted_a[..i - 1] == encrypted_b[..i - 1];
-        if !first_block_stays_the_same {
+    // Skip the prefix, if any, and go to the first block
+    // that is modified with each different input
+    let cipher_a = encryption_fn(&[]);
+    let cipher_b = encryption_fn(&[0]);
+    let cipher_c = encryption_fn(&[0, 0]);
+    let mut k = 0;
+    while cipher_a[k] == cipher_b[k] && cipher_b[k] == cipher_c[k] {
+        k += 1;
+    }
+
+    for i in 3..65 {
+        let prefix = vec![0; i];
+        let cipher_a = encryption_fn(&prefix[..i - 2]);
+        let cipher_b = encryption_fn(&prefix[..i - 1]);
+        let cipher_c = encryption_fn(&prefix);
+        if cipher_a[k] != cipher_b[k] || cipher_a[k] != cipher_c[k] {
             continue;
         }
 
-        for j in 2..65 {
-            if encrypted_a[j] != encrypted_b[j] {
-                return j;
+        for j in k..cipher_a.len() {
+            if cipher_a[j] == cipher_b[j] && cipher_b[j] == cipher_c[j] {
+                continue;
             }
+
+            return j - k;
         }
     }
 
@@ -79,12 +91,13 @@ where
     let plain = vec![0; block_size * 100];
     let cipher = encryption_fn(&plain);
 
-    max_repeated_block(&cipher) >= 100
+    max_repeated_block(&cipher) >= 90
 }
 
-fn brute_force_encrypted_block<F>(
+pub fn brute_force_encrypted_block<F>(
     encryption_fn: F,
     prefix: &[u8],
+    block_position: usize,
     block_size: usize,
 ) -> HashMap<Vec<u8>, u8>
 where
@@ -94,7 +107,9 @@ where
     for i in 0..=255u8 {
         let prefix_with_character = [prefix, &[i]].concat().to_vec();
         let encrypted_data = encryption_fn(&prefix_with_character);
-        let encrypted_block = encrypted_data[0..block_size].to_vec();
+        let start = block_position * block_size;
+        let end = start + block_size;
+        let encrypted_block = encrypted_data[start..end].to_vec();
         encrypted_block_to_character.insert(encrypted_block, i);
     }
 
