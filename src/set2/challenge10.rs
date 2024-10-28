@@ -5,7 +5,7 @@ use aes::{
 
 use crate::set1::challenge2::xor_bytes;
 
-use super::challenge9::pkcs7_padding;
+use super::challenge9::{pkcs7_padding, strip_pkcs7_padding};
 
 pub fn encrypt_aes_128_ecb(data: &[u8], key: &[u8]) -> Vec<u8> {
     let key = GenericArray::from_slice(key);
@@ -60,13 +60,8 @@ pub fn decrypt_aes_128_cbc(data: &[u8], key: &[u8], iv: Option<Vec<u8>>) -> Opti
         plain.push(xor_bytes(&plain_chunk, prev_chunk));
     }
 
-    let plain = plain
-        .iter()
-        .rev()
-        .flatten()
-        .filter(|&&x| x != 0)
-        .cloned()
-        .collect::<Vec<u8>>();
+    let plain = plain.iter().rev().flatten().cloned().collect::<Vec<u8>>();
+    let plain = strip_pkcs7_padding(&plain);
 
     String::from_utf8(plain).ok()
 }
@@ -128,6 +123,6 @@ mod tests {
         assert!(plain.starts_with(
             "I'm back and I'm ringin' the bell \nA rockin' on the mike while the fly girls yell"
         ));
-        assert!(plain.ends_with("Play that funky music \n\u{4}\u{4}\u{4}\u{4}"));
+        assert!(plain.ends_with("Play that funky music \n"));
     }
 }

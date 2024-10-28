@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{set1::challenge7::decrypt_aes_128_ecb, set2::challenge12::is_ecb};
 
-use super::{challenge10::encrypt_aes_128_ecb, challenge12::discover_block_size};
+use super::{challenge10::encrypt_aes_128_ecb, challenge12::compute_block_size_and_padding_length};
 
 pub fn parse_query_string(query_string: &str) -> HashMap<String, String> {
     let key_value_pairs = query_string.split('&');
@@ -33,50 +33,41 @@ pub fn ecb_cut_and_paste_attack<F>(encrypt_fn: F) -> Vec<u8>
 where
     F: Fn(&[u8]) -> Vec<u8>,
 {
-    let block_size = discover_block_size(&encrypt_fn);
+    let (block_size, original_padding_length) = compute_block_size_and_padding_length(&encrypt_fn);
     if !is_ecb(&encrypt_fn, block_size) {
         panic!("Data not encryped with ECB");
     }
 
-    let length_fn = |i: usize| encrypt_fn(&vec![0; i]).len();
-    let mut i = 1;
-    while length_fn(i - 1) == length_fn(i) {
-        i += 1;
-    }
-    let num_chars_before_new_block = i;
+    let admin_block_padding = vec![(block_size - 5) as u8; block_size - 5];
+    let admin_block = ["admin".as_bytes(), &admin_block_padding].concat();
 
-    let crafted_input = [
-        vec!["a"; num_chars_before_new_block],
-        vec!["a", "d", "m", "i", "n"],
-        vec!["\0"; 11],
-        vec!["a", "d", "m", "i", "n"],
-        vec!["\0"; 11],
-    ]
-    .concat()
-    .join("");
-    let cipher = encrypt_fn(crafted_input.as_bytes());
+    let crafted_cipher_block = craft_admin_cipher_block(&encrypt_fn, block_size, admin_block);
 
-    let cipher_blocks = cipher
-        .chunks(block_size)
-        .map(|x| x.to_vec())
-        .collect::<Vec<Vec<_>>>();
-    let mut cipher_crafted_block = vec![];
-    for i in 0..cipher_blocks.len() {
-        let block_i = &cipher_blocks[i];
-        for block_j in cipher_blocks.iter().skip(i + 1) {
-            if block_i == block_j {
-                cipher_crafted_block = block_i.clone();
-                break;
+    let crafted_input = vec![0; original_padding_length + "user".len()];
+    let cipher = encrypt_fn(&crafted_input);
+    let cipher_without_last_block = cipher[..cipher.len() - block_size].to_vec();
+
+    [cipher_without_last_block, crafted_cipher_block].concat()
+}
+
+fn craft_admin_cipher_block<F>(encrypt_fn: F, block_size: usize, admin_block: Vec<u8>) -> Vec<u8>
+where
+    F: Fn(&[u8]) -> Vec<u8>,
+{
+    let mut i = 0;
+    loop {
+        let crafted_input = [vec![0; i], admin_block.clone(), admin_block.clone()].concat();
+        let cipher = encrypt_fn(&crafted_input);
+        let cipher_blocks = cipher.chunks(block_size).collect::<Vec<&[u8]>>();
+
+        for j in 1..cipher_blocks.len() {
+            if cipher_blocks[j - 1] == cipher_blocks[j] {
+                return cipher_blocks[j].to_vec();
             }
         }
+
+        i += 1;
     }
-
-    let crafted_input = [vec!["a"; num_chars_before_new_block + 3]]
-        .concat()
-        .join("");
-    let cipher = encrypt_fn(crafted_input.as_bytes());
-
-    [cipher[..cipher.len() - 16].to_vec(), cipher_crafted_block].concat()
 }
 
 #[cfg(test)]

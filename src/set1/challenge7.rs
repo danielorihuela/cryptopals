@@ -3,6 +3,8 @@ use aes::{
     Aes128,
 };
 
+use crate::set2::challenge9::strip_pkcs7_padding;
+
 pub fn decrypt_aes_128_ecb(data: &[u8], key: &[u8]) -> Option<String> {
     let key = GenericArray::from_slice(key);
     let cipher = Aes128::new(key);
@@ -15,8 +17,8 @@ pub fn decrypt_aes_128_ecb(data: &[u8], key: &[u8]) -> Option<String> {
             block
         })
         .flat_map(|b| b.to_vec())
-        .filter(|&x| x != 0)
         .collect::<Vec<u8>>();
+    let plain = strip_pkcs7_padding(&plain);
 
     String::from_utf8(plain).ok()
 }
@@ -39,6 +41,6 @@ mod tests {
         assert!(plain.starts_with(
             "I'm back and I'm ringin' the bell \nA rockin' on the mike while the fly girls yell"
         ));
-        assert!(plain.ends_with("Play that funky music \n\u{4}\u{4}\u{4}\u{4}"));
+        assert!(plain.ends_with("Play that funky music \n"));
     }
 }

@@ -15,73 +15,48 @@ pub fn encryption_oracle(data: &[u8], key: &[u8]) -> Vec<u8> {
     encrypt_aes_128_ecb(&data, key)
 }
 
-pub fn attack_ecb_one_byte_at_a_time<F>(encryption_fn: F) -> String
+pub fn attack_ecb_one_byte_at_a_time<F>(encrypt_fn: F) -> String
 where
     F: Fn(&[u8]) -> Vec<u8>,
 {
-    let block_size = discover_block_size(&encryption_fn);
-    if !is_ecb(&encryption_fn, block_size) {
+    let (block_size, padding_length) = compute_block_size_and_padding_length(&encrypt_fn);
+    if !is_ecb(&encrypt_fn, block_size) {
         panic!("Data not encryped with ECB");
     }
 
-    let num_blocks = encryption_fn(&[]).len() / block_size;
-    let mut decrypted_blocks: Vec<Vec<u8>> = vec![vec![]; num_blocks];
-    for i in 0..num_blocks {
-        for j in (0..block_size).rev() {
-            let prefix = if i == 0 {
-                vec![b'a'; j]
-            } else {
-                decrypted_blocks[i - 1][block_size - j..].to_vec()
-            };
-            let crafted_prefix = [&prefix, &decrypted_blocks[i][..]].concat();
-            let encrypted_block_to_character =
-                brute_force_encrypted_block(&encryption_fn, &crafted_prefix, 0, block_size);
+    let mut plain = vec![0; block_size - 1];
+    let num_target_bytes = encrypt_fn(&[]).len() - padding_length;
+    for i in 0..num_target_bytes {
+        let crafted_prefix = &plain[plain.len() - (block_size - 1)..];
+        let cipher_block_to_character =
+            brute_force_cipher_block(&encrypt_fn, crafted_prefix, 0, block_size);
 
-            let encrypted_data = encryption_fn(&prefix);
-            let character = encrypted_block_to_character
-                .get(&encrypted_data[i * block_size..(i + 1) * block_size])
-                .expect("Exists");
+        let raw_prefix = vec![0; block_size - 1 - (i % block_size)];
+        let cipher = encrypt_fn(&raw_prefix);
+        let start = (i / block_size) * block_size;
+        let end = start + block_size;
+        let character = cipher_block_to_character
+            .get(&cipher[start..end])
+            .expect("Exists");
 
-            decrypted_blocks[i].push(*character);
-        }
+        plain.push(*character);
     }
 
-    String::from_utf8(decrypted_blocks.into_iter().flatten().collect()).unwrap()
+    String::from_utf8(plain[block_size - 1..].to_vec()).expect("Valid plain message")
 }
 
-pub fn discover_block_size<F>(encryption_fn: F) -> usize
+pub fn compute_block_size_and_padding_length<F>(encryption_fn: F) -> (usize, usize)
 where
     F: Fn(&[u8]) -> Vec<u8>,
 {
-    // Skip the prefix, if any, and go to the first block
-    // that is modified with each different input
-    let cipher_a = encryption_fn(&[]);
-    let cipher_b = encryption_fn(&[0]);
-    let cipher_c = encryption_fn(&[0, 0]);
-    let mut k = 0;
-    while cipher_a[k] == cipher_b[k] && cipher_b[k] == cipher_c[k] {
-        k += 1;
+    let mut i = 0;
+    let mut len_diff = 0;
+    while len_diff == 0 {
+        len_diff = encryption_fn(&vec![0; i + 1]).len() - encryption_fn(&vec![0; i]).len();
+        i += 1;
     }
 
-    for i in 3..65 {
-        let prefix = vec![0; i];
-        let cipher_a = encryption_fn(&prefix[..i - 2]);
-        let cipher_b = encryption_fn(&prefix[..i - 1]);
-        let cipher_c = encryption_fn(&prefix);
-        if cipher_a[k] != cipher_b[k] || cipher_a[k] != cipher_c[k] {
-            continue;
-        }
-
-        for j in k..cipher_a.len() {
-            if cipher_a[j] == cipher_b[j] && cipher_b[j] == cipher_c[j] {
-                continue;
-            }
-
-            return j - k;
-        }
-    }
-
-    0
+    (len_diff, i)
 }
 
 pub fn is_ecb<F>(encryption_fn: F, block_size: usize) -> bool
@@ -94,7 +69,7 @@ where
     max_repeated_block(&cipher) >= 90
 }
 
-pub fn brute_force_encrypted_block<F>(
+pub fn brute_force_cipher_block<F>(
     encryption_fn: F,
     prefix: &[u8],
     block_position: usize,
@@ -125,14 +100,14 @@ mod tests {
         challenge12::{attack_ecb_one_byte_at_a_time, is_ecb, UNKNOWN_STRING},
     };
 
-    use super::{discover_block_size, encryption_oracle};
+    use super::{compute_block_size_and_padding_length, encryption_oracle};
 
     #[test]
     fn test_discover_block_size() {
         let key = random_bytes(16);
         let encryption_fn = |data: &[u8]| encryption_oracle(data, &key);
 
-        let block_size = discover_block_size(encryption_fn);
+        let (block_size, _) = compute_block_size_and_padding_length(encryption_fn);
         assert_eq!(16, block_size);
     }
 
@@ -141,7 +116,7 @@ mod tests {
         let key = random_bytes(16);
         let encryption_fn = |data: &[u8]| encryption_oracle(data, &key);
 
-        let block_size = discover_block_size(encryption_fn);
+        let (block_size, _) = compute_block_size_and_padding_length(encryption_fn);
         assert!(is_ecb(encryption_fn, block_size));
         assert!(!is_ecb(encryption_fn, 8));
     }
@@ -152,7 +127,7 @@ mod tests {
         let encryption_fn = |data: &[u8]| encryption_oracle(data, &key);
         assert_eq!(
             String::from_utf8(BASE64_STANDARD.decode(UNKNOWN_STRING).unwrap()).unwrap(),
-            attack_ecb_one_byte_at_a_time(encryption_fn).trim_end_matches('\0')
+            attack_ecb_one_byte_at_a_time(encryption_fn)
         );
     }
 }
