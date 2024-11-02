@@ -44,7 +44,7 @@ pub fn encrypt_aes_128_cbc(data: &[u8], key: &[u8], iv: Option<Vec<u8>>) -> Vec<
     cipher
 }
 
-pub fn decrypt_aes_128_cbc(data: &[u8], key: &[u8], iv: Option<Vec<u8>>) -> Option<String> {
+pub fn decrypt_aes_128_cbc(data: &[u8], key: &[u8], iv: Option<Vec<u8>>) -> String {
     let key = GenericArray::from_slice(key);
     let cipher = Aes128::new(key);
 
@@ -63,7 +63,7 @@ pub fn decrypt_aes_128_cbc(data: &[u8], key: &[u8], iv: Option<Vec<u8>>) -> Opti
     let plain = plain.iter().rev().flatten().cloned().collect::<Vec<u8>>();
     let plain = strip_pkcs7_padding(&plain);
 
-    String::from_utf8(plain).ok()
+    String::from_utf8_lossy(&plain).to_string()
 }
 
 #[cfg(test)]
@@ -100,7 +100,7 @@ mod tests {
         let cipher = encrypt_aes_128_cbc(message.as_bytes(), password.as_bytes(), None);
         assert_eq!(
             message,
-            decrypt_aes_128_cbc(&cipher, password.as_bytes(), None).unwrap()
+            decrypt_aes_128_cbc(&cipher, password.as_bytes(), None)
         );
 
         let message = "Random message";
@@ -108,7 +108,7 @@ mod tests {
         let cipher = encrypt_aes_128_cbc(message.as_bytes(), password.as_bytes(), None);
         assert_eq!(
             message,
-            decrypt_aes_128_cbc(&cipher, password.as_bytes(), None).unwrap()
+            decrypt_aes_128_cbc(&cipher, password.as_bytes(), None)
         );
     }
 
@@ -119,7 +119,7 @@ mod tests {
             .decode(file_data.lines().collect::<String>())
             .unwrap();
         let password = "YELLOW SUBMARINE";
-        let plain = decrypt_aes_128_cbc(&cipher, password.as_bytes(), None).unwrap();
+        let plain = decrypt_aes_128_cbc(&cipher, password.as_bytes(), None);
         assert!(plain.starts_with(
             "I'm back and I'm ringin' the bell \nA rockin' on the mike while the fly girls yell"
         ));
