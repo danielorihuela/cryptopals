@@ -37,14 +37,14 @@ pub fn cbc_bitflipping_attack() -> Vec<u8> {
     let mut crafted_input = vec!["a"; block_prefix_length].join("");
     crafted_input.push_str("XadminYtrueX");
 
-    let cipher = encrypt_user_data(&crafted_input);
+    let ciphertext = encrypt_user_data(&crafted_input);
 
-    let mut crafted_cipher = cipher;
-    crafted_cipher[2 * block_size] ^= b';' ^ b'X';
-    crafted_cipher[2 * block_size + 6] ^= b'=' ^ b'Y';
-    crafted_cipher[2 * block_size + 11] ^= b';' ^ b'X';
+    let mut crafted_ciphertext = ciphertext;
+    crafted_ciphertext[2 * block_size] ^= b';' ^ b'X';
+    crafted_ciphertext[2 * block_size + 6] ^= b'=' ^ b'Y';
+    crafted_ciphertext[2 * block_size + 11] ^= b';' ^ b'X';
 
-    crafted_cipher
+    crafted_ciphertext
 }
 
 #[cfg(test)]
@@ -53,7 +53,7 @@ mod tests {
 
     #[test]
     fn test_cbc_bitflipping_attack() {
-        let crafted_cipher = cbc_bitflipping_attack();
-        assert!(is_admin(&crafted_cipher));
+        let crafted_ciphertext = cbc_bitflipping_attack();
+        assert!(is_admin(&crafted_ciphertext));
     }
 }

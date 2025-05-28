@@ -7,7 +7,7 @@ use crate::set2::challenge12::is_ecb;
 use super::{
     challenge10::encrypt_aes_128_ecb,
     challenge11::random_bytes,
-    challenge12::{brute_force_cipher_block, compute_block_size_and_padding_length},
+    challenge12::{brute_force_ciphertext_block, compute_block_size_and_padding_length},
 };
 
 lazy_static! {
@@ -56,16 +56,16 @@ where
             &plain[plain.len() - (block_size - 1)..],
         ]
         .concat();
-        let cipher_block_to_character =
-            brute_force_cipher_block(&encrypt_fn, &crafted_prefix, prefix_blocks, block_size);
+        let ciphertext_block_to_character =
+            brute_force_ciphertext_block(&encrypt_fn, &crafted_prefix, prefix_blocks, block_size);
 
         let raw_prefix =
             vec![0; bytes_to_fill_last_prefix_block + block_size - 1 - (i % block_size)];
-        let cipher = encrypt_fn(&raw_prefix);
+        let ciphertext = encrypt_fn(&raw_prefix);
         let start = (prefix_blocks + (i / block_size)) * block_size;
         let end = start + block_size;
-        let character = cipher_block_to_character
-            .get(&cipher[start..end])
+        let character = ciphertext_block_to_character
+            .get(&ciphertext[start..end])
             .expect("Exists");
 
         plain.push(*character);
@@ -78,13 +78,13 @@ pub fn prefix_length<F>(encrypt_fn: F, block_size: usize) -> usize
 where
     F: Fn(&[u8]) -> Vec<u8>,
 {
-    let cipher_a = encrypt_fn(&[]);
-    let cipher_b = encrypt_fn(&[0]);
-    let prefix_smaller_than_block_size = cipher_a[0..block_size] != cipher_b[0..block_size];
+    let ciphertext_a = encrypt_fn(&[]);
+    let ciphertext_b = encrypt_fn(&[0]);
+    let prefix_smaller_than_block_size = ciphertext_a[0..block_size] != ciphertext_b[0..block_size];
     if prefix_smaller_than_block_size {
         bytes_within_last_prefix_block(encrypt_fn, 0, block_size)
     } else {
-        let blocks_in_prefix = full_blocks_within_prefix(&cipher_a, &cipher_b, block_size);
+        let blocks_in_prefix = full_blocks_within_prefix(&ciphertext_a, &ciphertext_b, block_size);
 
         let initial_bytes = blocks_in_prefix * block_size;
         let last_bytes = bytes_within_last_prefix_block(encrypt_fn, initial_bytes, block_size);
@@ -92,9 +92,9 @@ where
     }
 }
 
-fn full_blocks_within_prefix(cipher_a: &[u8], cipher_b: &[u8], block_size: usize) -> usize {
+fn full_blocks_within_prefix(ciphertext_a: &[u8], ciphertext_b: &[u8], block_size: usize) -> usize {
     let mut i = 0;
-    while cipher_a[i..i + block_size] == cipher_b[i..i + block_size] {
+    while ciphertext_a[i..i + block_size] == ciphertext_b[i..i + block_size] {
         i += block_size;
     }
 
@@ -111,10 +111,10 @@ where
 {
     let start = block_position;
     let end = block_position + block_size;
-    let cipher_block = |length: usize| encryption_fn(&vec![0; length])[start..end].to_vec();
+    let ciphertext_block = |length: usize| encryption_fn(&vec![0; length])[start..end].to_vec();
 
     let mut i = 0;
-    while cipher_block(i) != cipher_block(i + 1) {
+    while ciphertext_block(i) != ciphertext_block(i + 1) {
         i += 1;
     }
 

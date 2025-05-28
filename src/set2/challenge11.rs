@@ -42,8 +42,8 @@ where
     F: FnMut(Vec<u8>) -> Vec<u8>,
 {
     let plain = vec![0; 16 * 100];
-    let cipher = encrypt_fn(plain);
-    if max_repeated_block(&cipher) >= 100 {
+    let ciphertext = encrypt_fn(plain);
+    if max_repeated_block(&ciphertext) >= 100 {
         BlockMode::ECB
     } else {
         BlockMode::CBC

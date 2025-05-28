@@ -11,7 +11,7 @@ pub fn encrypt_aes_128_ecb(data: &[u8], key: &[u8]) -> Vec<u8> {
     let key = GenericArray::from_slice(key);
 
     let plain = Aes128::new(key);
-    let cipher = pkcs7_padding(data, 16)
+    let ciphertext = pkcs7_padding(data, 16)
         .chunks(16)
         .map(|c| {
             let mut block = *GenericArray::<u8, U16>::from_slice(c);
@@ -22,26 +22,26 @@ pub fn encrypt_aes_128_ecb(data: &[u8], key: &[u8]) -> Vec<u8> {
         .flat_map(|b| b.to_vec())
         .collect::<Vec<u8>>();
 
-    cipher
+    ciphertext
 }
 
 pub fn encrypt_aes_128_cbc(data: &[u8], key: &[u8], iv: Option<Vec<u8>>) -> Vec<u8> {
     let key = GenericArray::from_slice(key);
-    let plain = Aes128::new(key);
+    let cipher = Aes128::new(key);
 
-    let mut cipher = vec![];
+    let mut ciphertext = vec![];
     let mut prev_chunk = iv.unwrap_or(vec![0; 16]);
     for curr_chunk in pkcs7_padding(data, 16).chunks(16) {
         let xor_chunk = xor_bytes(&prev_chunk, curr_chunk);
 
-        let mut cipher_chunk = *GenericArray::<u8, U16>::from_slice(&xor_chunk);
-        plain.encrypt_block(&mut cipher_chunk);
+        let mut ciphertext_chunk = *GenericArray::<u8, U16>::from_slice(&xor_chunk);
+        cipher.encrypt_block(&mut ciphertext_chunk);
 
-        cipher.append(&mut cipher_chunk.to_vec());
-        prev_chunk = cipher_chunk.to_vec();
+        ciphertext.append(&mut ciphertext_chunk.to_vec());
+        prev_chunk = ciphertext_chunk.to_vec();
     }
 
-    cipher
+    ciphertext
 }
 
 pub fn decrypt_aes_128_cbc(data: &[u8], key: &[u8], iv: Option<Vec<u8>>) -> String {
@@ -78,18 +78,18 @@ mod tests {
     fn encrypt_decrypt_aes_128_ecb_works() {
         let message = "Random message I need to encrypt";
         let password = "YELLOW SUBMARINE";
-        let cipher = encrypt_aes_128_ecb(message.as_bytes(), password.as_bytes());
+        let ciphertext = encrypt_aes_128_ecb(message.as_bytes(), password.as_bytes());
         assert_eq!(
             message,
-            decrypt_aes_128_ecb(&cipher, password.as_bytes()).unwrap()
+            decrypt_aes_128_ecb(&ciphertext, password.as_bytes()).unwrap()
         );
 
         let message = "Random message";
         let password = "YELLOW SUBMARINE";
-        let cipher = encrypt_aes_128_ecb(message.as_bytes(), password.as_bytes());
+        let ciphertext = encrypt_aes_128_ecb(message.as_bytes(), password.as_bytes());
         assert_eq!(
             message,
-            decrypt_aes_128_ecb(&cipher, password.as_bytes()).unwrap()
+            decrypt_aes_128_ecb(&ciphertext, password.as_bytes()).unwrap()
         );
     }
 
@@ -97,29 +97,29 @@ mod tests {
     fn encrypt_decrypt_aes_128_cbc_works() {
         let message = "Random message I need to encrypt";
         let password = "YELLOW SUBMARINE";
-        let cipher = encrypt_aes_128_cbc(message.as_bytes(), password.as_bytes(), None);
+        let ciphertext = encrypt_aes_128_cbc(message.as_bytes(), password.as_bytes(), None);
         assert_eq!(
             message,
-            decrypt_aes_128_cbc(&cipher, password.as_bytes(), None)
+            decrypt_aes_128_cbc(&ciphertext, password.as_bytes(), None)
         );
 
         let message = "Random message";
         let password = "YELLOW SUBMARINE";
-        let cipher = encrypt_aes_128_cbc(message.as_bytes(), password.as_bytes(), None);
+        let ciphertext = encrypt_aes_128_cbc(message.as_bytes(), password.as_bytes(), None);
         assert_eq!(
             message,
-            decrypt_aes_128_cbc(&cipher, password.as_bytes(), None)
+            decrypt_aes_128_cbc(&ciphertext, password.as_bytes(), None)
         );
     }
 
     #[test]
     fn decrypt_aes_128_cbc_works() {
         let file_data = read_set2_resource("challenge10.txt");
-        let cipher = BASE64_STANDARD
+        let ciphertext = BASE64_STANDARD
             .decode(file_data.lines().collect::<String>())
             .unwrap();
         let password = "YELLOW SUBMARINE";
-        let plain = decrypt_aes_128_cbc(&cipher, password.as_bytes(), None);
+        let plain = decrypt_aes_128_cbc(&ciphertext, password.as_bytes(), None);
         assert!(plain.starts_with(
             "I'm back and I'm ringin' the bell \nA rockin' on the mike while the fly girls yell"
         ));

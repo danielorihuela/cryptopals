@@ -28,15 +28,15 @@ where
     let num_target_bytes = encrypt_fn(&[]).len() - padding_length;
     for i in 0..num_target_bytes {
         let crafted_prefix = &plain[plain.len() - (block_size - 1)..];
-        let cipher_block_to_character =
-            brute_force_cipher_block(&encrypt_fn, crafted_prefix, 0, block_size);
+        let ciphertext_block_to_character =
+            brute_force_ciphertext_block(&encrypt_fn, crafted_prefix, 0, block_size);
 
         let raw_prefix = vec![0; block_size - 1 - (i % block_size)];
-        let cipher = encrypt_fn(&raw_prefix);
+        let ciphertext = encrypt_fn(&raw_prefix);
         let start = (i / block_size) * block_size;
         let end = start + block_size;
-        let character = cipher_block_to_character
-            .get(&cipher[start..end])
+        let character = ciphertext_block_to_character
+            .get(&ciphertext[start..end])
             .expect("Exists");
 
         plain.push(*character);
@@ -64,12 +64,12 @@ where
     F: Fn(&[u8]) -> Vec<u8>,
 {
     let plain = vec![0; block_size * 100];
-    let cipher = encryption_fn(&plain);
+    let ciphertext = encryption_fn(&plain);
 
-    max_repeated_block(&cipher) >= 90
+    max_repeated_block(&ciphertext) >= 90
 }
 
-pub fn brute_force_cipher_block<F>(
+pub fn brute_force_ciphertext_block<F>(
     encryption_fn: F,
     prefix: &[u8],
     block_position: usize,

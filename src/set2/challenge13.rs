@@ -24,8 +24,8 @@ pub fn encrypt_profile(email: &str, key: &[u8]) -> Vec<u8> {
     encrypt_aes_128_ecb(profile_for(email).as_bytes(), key)
 }
 
-pub fn decrypt_profile(cipher: &[u8], key: &[u8]) -> HashMap<String, String> {
-    let plain = decrypt_aes_128_ecb(cipher, key).expect("Valid profile");
+pub fn decrypt_profile(ciphertext: &[u8], key: &[u8]) -> HashMap<String, String> {
+    let plain = decrypt_aes_128_ecb(ciphertext, key).expect("Valid profile");
     parse_query_string(&plain)
 }
 
@@ -41,28 +41,33 @@ where
     let admin_block_padding = vec![(block_size - 5) as u8; block_size - 5];
     let admin_block = ["admin".as_bytes(), &admin_block_padding].concat();
 
-    let crafted_cipher_block = craft_admin_cipher_block(&encrypt_fn, block_size, admin_block);
+    let crafted_ciphertext_block =
+        craft_admin_ciphertext_block(&encrypt_fn, block_size, admin_block);
 
     let crafted_input = vec![0; original_padding_length + "user".len()];
-    let cipher = encrypt_fn(&crafted_input);
-    let cipher_without_last_block = cipher[..cipher.len() - block_size].to_vec();
+    let ciphertext = encrypt_fn(&crafted_input);
+    let ciphertext_without_last_block = ciphertext[..ciphertext.len() - block_size].to_vec();
 
-    [cipher_without_last_block, crafted_cipher_block].concat()
+    [ciphertext_without_last_block, crafted_ciphertext_block].concat()
 }
 
-fn craft_admin_cipher_block<F>(encrypt_fn: F, block_size: usize, admin_block: Vec<u8>) -> Vec<u8>
+fn craft_admin_ciphertext_block<F>(
+    encrypt_fn: F,
+    block_size: usize,
+    admin_block: Vec<u8>,
+) -> Vec<u8>
 where
     F: Fn(&[u8]) -> Vec<u8>,
 {
     let mut i = 0;
     loop {
         let crafted_input = [vec![0; i], admin_block.clone(), admin_block.clone()].concat();
-        let cipher = encrypt_fn(&crafted_input);
-        let cipher_blocks = cipher.chunks(block_size).collect::<Vec<&[u8]>>();
+        let ciphertext = encrypt_fn(&crafted_input);
+        let ciphertext_blocks = ciphertext.chunks(block_size).collect::<Vec<&[u8]>>();
 
-        for j in 1..cipher_blocks.len() {
-            if cipher_blocks[j - 1] == cipher_blocks[j] {
-                return cipher_blocks[j].to_vec();
+        for j in 1..ciphertext_blocks.len() {
+            if ciphertext_blocks[j - 1] == ciphertext_blocks[j] {
+                return ciphertext_blocks[j].to_vec();
             }
         }
 
@@ -106,9 +111,9 @@ mod tests {
         let encrypt_fn = |data: &[u8]| {
             encrypt_profile(&data.iter().map(|&x| x as char).collect::<String>(), &key)
         };
-        let crafted_cipher = ecb_cut_and_paste_attack(encrypt_fn);
+        let crafted_ciphertext = ecb_cut_and_paste_attack(encrypt_fn);
 
-        let profile = decrypt_profile(&crafted_cipher, &key);
+        let profile = decrypt_profile(&crafted_ciphertext, &key);
         assert_eq!("admin", profile.get("role").unwrap());
     }
 }
