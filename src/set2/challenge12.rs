@@ -8,7 +8,7 @@ use super::challenge10::encrypt_aes_128_ecb;
 
 const UNKNOWN_STRING: &str = "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK";
 
-pub fn encryption_oracle(data: &[u8], key: &[u8]) -> Vec<u8> {
+pub fn encrypt(data: &[u8], key: &[u8]) -> Vec<u8> {
     let unknown_string = BASE64_STANDARD.decode(UNKNOWN_STRING).expect("Valid data");
     let data = [data, &unknown_string].concat();
 
@@ -100,12 +100,12 @@ mod tests {
         challenge12::{attack_ecb_one_byte_at_a_time, is_ecb, UNKNOWN_STRING},
     };
 
-    use super::{compute_block_size_and_padding_length, encryption_oracle};
+    use super::{compute_block_size_and_padding_length, encrypt};
 
     #[test]
     fn test_discover_block_size() {
         let key = random_bytes(16);
-        let encryption_fn = |data: &[u8]| encryption_oracle(data, &key);
+        let encryption_fn = |data: &[u8]| encrypt(data, &key);
 
         let (block_size, _) = compute_block_size_and_padding_length(encryption_fn);
         assert_eq!(16, block_size);
@@ -114,7 +114,7 @@ mod tests {
     #[test]
     fn test_is_ecb() {
         let key = random_bytes(16);
-        let encryption_fn = |data: &[u8]| encryption_oracle(data, &key);
+        let encryption_fn = |data: &[u8]| encrypt(data, &key);
 
         let (block_size, _) = compute_block_size_and_padding_length(encryption_fn);
         assert!(is_ecb(encryption_fn, block_size));
@@ -124,7 +124,7 @@ mod tests {
     #[test]
     fn test_attack_ecb() {
         let key = random_bytes(16);
-        let encryption_fn = |data: &[u8]| encryption_oracle(data, &key);
+        let encryption_fn = |data: &[u8]| encrypt(data, &key);
         assert_eq!(
             String::from_utf8(BASE64_STANDARD.decode(UNKNOWN_STRING).unwrap()).unwrap(),
             attack_ecb_one_byte_at_a_time(encryption_fn)

@@ -149,7 +149,7 @@ mod tests {
     #[test]
     fn test_attack_ecb_with_new_method() {
         let key = random_bytes(16);
-        let encryption_fn = |data: &[u8]| crate::set2::challenge12::encryption_oracle(data, &key);
+        let encryption_fn = |data: &[u8]| crate::set2::challenge12::encrypt(data, &key);
         assert_eq!(
             String::from_utf8(BASE64_STANDARD.decode(UNKNOWN_STRING).unwrap()).unwrap(),
             attack_ecb_one_byte_at_a_time_prefix(encryption_fn)
