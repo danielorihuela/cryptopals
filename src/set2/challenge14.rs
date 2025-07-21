@@ -16,11 +16,11 @@ lazy_static! {
 }
 const UNKNOWN_STRING: &str = "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK";
 
-pub fn encryption_oracle(data: &[u8], key: &[u8]) -> Vec<u8> {
-    encryption_oracle_with_prefix(&RANDOM_PREFIX, data, key)
+pub fn encrypt(data: &[u8], key: &[u8]) -> Vec<u8> {
+    encrypt_with_prefix(&RANDOM_PREFIX, data, key)
 }
 
-pub fn encryption_oracle_with_prefix(prefix: &[u8], data: &[u8], key: &[u8]) -> Vec<u8> {
+pub fn encrypt_with_prefix(prefix: &[u8], data: &[u8], key: &[u8]) -> Vec<u8> {
     let unknown_string = BASE64_STANDARD.decode(UNKNOWN_STRING).expect("Valid data");
     let data = [&prefix, data, &unknown_string].concat();
 
@@ -136,7 +136,7 @@ mod tests {
             for i in 0..100 {
                 let random_prefix = random_bytes(i);
                 let encryption_fn =
-                    |data: &[u8]| encryption_oracle_with_prefix(&random_prefix, data, &key);
+                    |data: &[u8]| encrypt_with_prefix(&random_prefix, data, &key);
                 assert_eq!(
                     random_prefix.len(),
                     prefix_length(encryption_fn, 16),
@@ -160,7 +160,7 @@ mod tests {
     fn test_attack_ecb_with_prefix() {
         for _ in 0..10 {
             let key = random_bytes(16);
-            let encryption_fn = |data: &[u8]| encryption_oracle(data, &key);
+            let encryption_fn = |data: &[u8]| encrypt(data, &key);
             assert_eq!(
                 String::from_utf8(BASE64_STANDARD.decode(UNKNOWN_STRING).unwrap()).unwrap(),
                 attack_ecb_one_byte_at_a_time_prefix(encryption_fn).trim_end_matches('\0')
