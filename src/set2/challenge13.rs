@@ -35,7 +35,7 @@ where
 {
     let (block_size, original_padding_length) = compute_block_size_and_padding_length(&encrypt_fn);
     if !is_ecb(&encrypt_fn, block_size) {
-        panic!("Data not encryped with ECB");
+        panic!("Data not encrypted with ECB");
     }
 
     let admin_block_padding = vec![(block_size - 5) as u8; block_size - 5];
