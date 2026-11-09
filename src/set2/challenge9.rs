@@ -5,9 +5,19 @@ pub fn pkcs7_padding(data: &[u8], block_size: usize) -> Vec<u8> {
     [data, &vec![padding_length as u8; padding_length]].concat()
 }
 
-pub fn strip_pkcs7_padding(data: &[u8]) -> Vec<u8> {
+pub fn strip_pkcs7_padding(data: &[u8]) -> Result<Vec<u8>, String> {
     let pad_length = *data.last().expect("Exists") as usize;
-    data[..data.len() - pad_length].to_vec()
+    if pad_length == 0 || pad_length > data.len() {
+        return Err("Invalid PKCS#7 padding".to_string());
+    }
+
+    for &byte in &data[data.len() - pad_length..] {
+        if byte as usize != pad_length {
+            return Err("Invalid PKCS#7 padding".to_string());
+        }
+    }
+
+    Ok(data[..data.len() - pad_length].to_vec())
 }
 
 #[cfg(test)]
@@ -34,15 +44,15 @@ mod tests {
             String::from_utf8(strip_pkcs7_padding(
                 "YELLOW SUBMARINE\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10"
                     .as_bytes()
-            ))
+            ).unwrap())
             .unwrap()
         );
 
         assert_eq!(
             "YELLOW SUBMARINE",
-            String::from_utf8(strip_pkcs7_padding(
-                "YELLOW SUBMARINE\x04\x04\x04\x04".as_bytes()
-            ))
+            String::from_utf8(
+                strip_pkcs7_padding("YELLOW SUBMARINE\x04\x04\x04\x04".as_bytes()).unwrap()
+            )
             .unwrap()
         );
     }

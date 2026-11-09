@@ -135,8 +135,7 @@ mod tests {
         for _ in 0..10 {
             for i in 0..100 {
                 let random_prefix = random_bytes(i);
-                let encryption_fn =
-                    |data: &[u8]| encrypt_with_prefix(&random_prefix, data, &key);
+                let encryption_fn = |data: &[u8]| encrypt_with_prefix(&random_prefix, data, &key);
                 assert_eq!(
                     random_prefix.len(),
                     prefix_length(encryption_fn, 16),

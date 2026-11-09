@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::RngExt;
 
 use crate::set1::challenge8::max_repeated_block;
 
@@ -11,10 +11,10 @@ pub fn random_bytes(num_bytes: usize) -> Vec<u8> {
 }
 
 pub fn encryption_oracle(data: &[u8], mode: &mut BlockMode) -> Vec<u8> {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
-    let a = rng.gen_range(5..=10);
-    let b = rng.gen_range(5..=10);
+    let a = rng.random_range(5..=10);
+    let b = rng.random_range(5..=10);
     let data = [&random_bytes(a), data, &random_bytes(b)].concat();
 
     let key = random_bytes(16);

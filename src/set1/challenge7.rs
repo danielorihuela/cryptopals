@@ -18,7 +18,7 @@ pub fn decrypt_aes_128_ecb(data: &[u8], key: &[u8]) -> Option<String> {
         })
         .flat_map(|b| b.to_vec())
         .collect::<Vec<u8>>();
-    let plain = strip_pkcs7_padding(&plain);
+    let plain = strip_pkcs7_padding(&plain).unwrap();
 
     String::from_utf8(plain).ok()
 }

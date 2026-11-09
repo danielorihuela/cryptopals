@@ -23,7 +23,7 @@ pub fn encrypt_user_data(data: &str) -> Vec<u8> {
 }
 
 pub fn is_admin(data: &[u8]) -> bool {
-    let plain = decrypt_aes_128_cbc(data, &KEY, Some(IV.to_vec()));
+    let plain = decrypt_aes_128_cbc(data, &KEY, Some(IV.to_vec())).unwrap();
     plain.contains(";admin=true;")
 }
 
